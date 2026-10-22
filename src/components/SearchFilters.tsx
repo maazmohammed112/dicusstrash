@@ -82,7 +82,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
         )}
       </div>
 
-      {/* Filter Category Pills (Horizontally scrollable) */}
+      {/* Responsive filter grid: labels stay inside their buttons at every width. */}
       <div className="filter-categories">
         {FILTER_PILLS.map((pill) => {
           const isActive = activeFilter === pill.id;
@@ -91,7 +91,8 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               key={pill.id}
               type="button"
               onClick={() => onFilterChange(pill.id)}
-              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer select-none ${
+              aria-pressed={isActive}
+              className={`filter-pill transition-all cursor-pointer select-none ${
                 isActive
                   ? 'bg-[#151515] text-[#FFFEF7] shadow-sm'
                   : 'bg-[#FFFEF7] text-[#77736C] hover:text-[#151515] hover:bg-[#F6EDCF] border border-[rgba(21,21,21,0.08)]'

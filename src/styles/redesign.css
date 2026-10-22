@@ -104,8 +104,6 @@ svg.lucide { stroke-width: 1.65; flex-shrink: 0; }
 .vault-footer > span:first-child { font-weight: 600; color: #302e27; font-size: 12px; }
 .search-filters { margin: 25px 0 8px; gap: 18px; }
 .search-filters > div:first-child { background: #eeece3; box-shadow: none; border: 1px solid #e2ded1; padding: 20px; }
-.search-filters > div:nth-child(2) { gap: 8px; padding-bottom: 10px; scrollbar-width: thin; }
-.search-filters > div:nth-child(2) button { padding: 11px 21px; font-size: 12px; font-weight: 500; }
 .search-filters > div:last-child > div { padding: 10px 14px; border-radius: 99px; background: transparent; border-color: #d8d4c5; }
 .search-filters select { font-size: 12px; }
 .app-main > .animate-fade-in > div:first-child > h2 { font-size: clamp(38px,5vw,68px); font-weight: 400; letter-spacing: -.055em; }
@@ -240,8 +238,6 @@ body { font-size: clamp(14px, 1.1vw, 16px); }
 .add-type-tabs button span { white-space: nowrap; overflow-wrap: normal; }
 .url-input-wrap input { padding-right: 42px !important; }
 .url-input-wrap > span, .url-input-wrap > svg { right: 14px; pointer-events: none; }
-.filter-categories { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; width: 100%; }
-.search-filters > .filter-categories button { padding: 10px 16px; font-size: 12px; line-height: 1.3; border: 1px solid #ddd8c9; }
 .search-filters > div:first-child { gap: 10px; padding: 15px 17px; }
 .search-filters > div:first-child svg { margin-right: 0; }
 .search-filters input { min-width: 0; width: 100%; font-size: clamp(14px,1.1vw,16px); }
@@ -315,7 +311,6 @@ body { font-size: clamp(14px, 1.1vw, 16px); }
   .page-header .icon-btn-circle { width: 36px; height: 36px; }
   .selection-button { font-size: 10px; padding: 8px; }
   .search-filters > div:last-child { grid-template-columns: minmax(0,1fr); }
-  .search-filters > .filter-categories button { flex: 1 0 auto; padding: 10px 14px; }
   .app-main { padding-inline: 18px; }
   .vault-hero h2 { font-size: clamp(36px,9vw,54px); }
   .quick-create { padding: 14px 12px; }
@@ -352,8 +347,6 @@ body { font-size: clamp(14px, 1.1vw, 16px); }
   .app-main { min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; }
   .floating-nav { position: relative; left: auto; bottom: auto; transform: none; align-self: center; flex-shrink: 0; margin: 8px auto 14px; padding-bottom: env(safe-area-inset-bottom,0px); }
   .vault-footer { margin-bottom: 0; }
-  .search-filters > .filter-categories { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7px; }
-  .search-filters > .filter-categories button { padding: 10px 3px; font-size: 11px; min-width: 0; }
 }
 @media (max-width: 767px) {
   .floating-nav { translate: none; width: max-content; }
@@ -375,3 +368,32 @@ body { font-size: clamp(14px, 1.1vw, 16px); }
 .not-found-page h1 { font-size: clamp(30px,4vw,52px); letter-spacing: -.05em; line-height: 1.1; margin-top: 24px; }
 .not-found-page p { font-size: 15px; line-height: 1.8; color: #77705f; margin: 20px 0 28px; }
 .not-found-page a { text-decoration: none; }
+
+/* Fit the number of columns to the space available, rather than squeezing four labels. */
+.search-filters > .filter-categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.5rem), 1fr));
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+}
+.search-filters .filter-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 11px 14px;
+  border: 1px solid #ddd8c9;
+  border-radius: 999px;
+  font-size: clamp(12px, 1vw, 14px);
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
