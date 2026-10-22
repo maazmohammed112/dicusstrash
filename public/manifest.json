@@ -1,0 +1,50 @@
+{
+  "name": "discuss/stash",
+  "short_name": "stash",
+  "description": "Save anything. Find everything. A warm, editorial, local-first personal vault.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FAF8F0",
+  "theme_color": "#FAF8F0",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "id": "/",
+  "shortcuts": [
+    {
+      "name": "Open vault",
+      "url": "/"
+    },
+    {
+      "name": "Receive shared links",
+      "url": "/share-target"
+    }
+  ]
+}

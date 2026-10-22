@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="warmBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF9EA" />
+      <stop offset="100%" stop-color="#F6EDCF" />
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#151515" flood-opacity="0.12" />
+    </filter>
+  </defs>
+  <!-- Background with rounded corners -->
+  <rect width="512" height="512" rx="128" fill="url(#warmBg)" />
+
+  <!-- Outer organic container with subtle border -->
+  <rect x="56" y="56" width="400" height="400" rx="96" fill="#FFFEF7" filter="url(#softShadow)" stroke="#E5DEC8" stroke-width="3" />
+
+  <!-- Coral accent pill badge -->
+  <rect x="116" y="116" width="130" height="52" rx="26" fill="#F2755B" />
+  <circle cx="142" cy="142" r="12" fill="#FFFEF7" />
+
+  <!-- Butter yellow accent pill -->
+  <rect x="260" y="116" width="136" height="52" rx="26" fill="#FFD76D" />
+
+  <!-- Central Stash Vault / Bookmark Graphic in Deep Ink -->
+  <path d="M166 210 C166 195 178 184 194 184 L318 184 C334 184 346 195 346 210 L346 360 C346 372 334 380 323 373 L256 332 L189 373 C178 380 166 372 166 360 Z" fill="#151515" />
+
+  <!-- Star-free, sleek inner punch-out / diamond slot -->
+  <circle cx="256" cy="254" r="24" fill="#FFD76D" />
+  <path d="M256 242 L264 254 L256 266 L248 254 Z" fill="#151515" />
+</svg>

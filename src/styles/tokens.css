@@ -1,0 +1,76 @@
+/* discuss/stash Design Tokens - Warm Editorial System */
+
+:root {
+  /* Colors */
+  --bg-primary: #FAF8F0;         /* Warm Ivory */
+  --bg-secondary: #EEEAD8;       /* Soft Cream */
+  --bg-surface: #FFFDF6;         /* Light Surface */
+  --bg-surface-elevated: #FFFFFF;
+  --bg-dark-pill: #151515;       /* Primary Action Pill */
+
+  --text-primary: #151515;       /* Deep Ink */
+  --text-muted: #77736C;         /* Warm Charcoal */
+  --text-subtle: #A39E94;
+  --text-on-dark: #FFFDF6;
+
+  /* Curated Pastel Accents */
+  --accent-coral: #ED7153;       /* Soft Coral */
+  --accent-coral-subtle: rgba(242, 117, 91, 0.15);
+  --accent-yellow: #F3D45D;      /* Butter Yellow */
+  --accent-yellow-subtle: rgba(255, 215, 109, 0.2);
+  --accent-blue: #BFD9F8;        /* Powder Blue */
+  --accent-blue-subtle: rgba(191, 217, 248, 0.25);
+  --accent-lavender: #DCCCF5;    /* Soft Lavender */
+  --accent-lavender-subtle: rgba(220, 204, 245, 0.25);
+  --accent-mint: #B4E8C2;        /* Mint / Sage */
+  --accent-mint-subtle: rgba(180, 232, 194, 0.25);
+
+  /* Marker Highlight */
+  --marker-yellow: #FFE382;
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(21, 21, 21, 0.08);
+  --border-medium: rgba(21, 21, 21, 0.14);
+  --border-glass: rgba(255, 255, 255, 0.85);
+
+  /* Liquid Glass Navigation & Toolbars */
+  --glass-bg: rgba(255, 254, 247, 0.78);
+  --glass-bg-hover: rgba(255, 254, 247, 0.92);
+  --glass-blur: blur(24px) saturate(170%);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.85);
+  --glass-shadow: 0 16px 40px rgba(21, 21, 21, 0.08), 0 2px 8px rgba(21, 21, 21, 0.04);
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(21, 21, 21, 0.04);
+  --shadow-md: 0 8px 24px rgba(21, 21, 21, 0.06);
+  --shadow-lg: 0 20px 48px rgba(21, 21, 21, 0.1);
+  --shadow-card: 0 4px 16px rgba(21, 21, 21, 0.05);
+
+  /* Radii */
+  --radius-pill: 9999px;
+  --radius-full: 9999px;
+  --radius-xs: 8px;
+  --radius-sm: 14px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-xl: 36px;
+  --radius-card: 26px;
+
+  /* Typography */
+  --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-handwritten: 'Caveat', cursive, sans-serif;
+
+  /* Fluid Display Sizes */
+  --font-size-display: clamp(2rem, 5vw, 3.25rem);
+  --font-size-h1: clamp(1.6rem, 4vw, 2.4rem);
+  --font-size-h2: clamp(1.3rem, 3vw, 1.8rem);
+  --font-size-h3: clamp(1.1rem, 2.5vw, 1.4rem);
+  --font-size-body: 0.9375rem;
+  --font-size-small: 0.8125rem;
+  --font-size-tiny: 0.72rem;
+
+  /* Transitions */
+  --transition-fast: 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-smooth: 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-spring: 360ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
