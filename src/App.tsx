@@ -11,6 +11,7 @@ import {
   deleteMultipleItems,
   moveItemsToFolder,
   toggleFavorite,
+  togglePin,
   toggleArchive,
   addCollection,
   updateCollection,
@@ -40,6 +41,7 @@ import { BulkActionBar } from './components/BulkActionBar';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { DuplicateNoticeModal } from './components/DuplicateNoticeModal';
 import { shareSavedItem } from './services/shareService';
+import { readClipboardUrl } from './services/clipboardService';
 import { inspectUrl } from './services/platformDetector';
 import { medianBridge } from './services/medianBridge';
 import { Plus, ArrowRight, ArrowLeft, Link2, FileText, ListChecks, MapPin, Paperclip, ArrowUpRight, Share2 } from 'lucide-react';
@@ -85,7 +87,9 @@ export function StashApp() {
   const [addInitialType, setAddInitialType] = useState<ItemType>('link');
   const [addInitialUrl, setAddInitialUrl] = useState('');
 
-  const openAdd = (type: ItemType = 'link') => {
+  const openAdd = async (type: ItemType = 'link') => {
+    const url = type === 'link' ? await readClipboardUrl() : null;
+    setAddInitialUrl(url || '');
     setAddInitialType(type);
     setIsAddOpen(true);
   };
@@ -214,7 +218,7 @@ export function StashApp() {
       });
     }
 
-    return result;
+    return [...result].sort((a, b) => (Number(Boolean(b.pinnedAt)) - Number(Boolean(a.pinnedAt))) || ((b.pinnedAt || b.createdAt) - (a.pinnedAt || a.createdAt)));
   }, [
     items,
     selectedCollectionId,
@@ -229,6 +233,10 @@ export function StashApp() {
     setIsLoadingSave(true);
     try {
       const urlInfo = await inspectUrl(rawUrl);
+      if (urlInfo.platform === 'maps') {
+        setAddInitialUrl(urlInfo.normalizedUrl); setAddInitialType('location'); setIsAddOpen(true);
+        return;
+      }
       const normalized = urlInfo.normalizedUrl;
 
       // Duplicate check
@@ -357,6 +365,7 @@ export function StashApp() {
       type: 'location',
       title: data.placeName,
       platform: 'maps',
+      normalizedUrl: data.mapsUrl,
       locationData: {
         placeName: data.placeName,
         mapsUrl: data.mapsUrl,
@@ -418,11 +427,22 @@ export function StashApp() {
     showToast(isFav ? 'Added to favorites' : 'Removed from favorites', 'info');
   };
 
+  const handleTogglePin = async (id: string) => {
+    try {
+      const updated = await togglePin(id);
+      if (updated) {
+        await refreshData();
+        setDetailItem(previous => previous?.id === id ? updated : previous);
+        showToast(updated.pinnedAt ? 'Pinned to the top of this folder' : 'Item unpinned', 'info');
+      }
+    } catch (error) { showToast((error as Error).message, 'info'); }
+  };
+
   const handleToggleArchive = async (id: string) => {
     const isArchived = await toggleArchive(id);
     await refreshData();
     if (detailItem && detailItem.id === id) {
-      setDetailItem(prev => prev ? { ...prev, isArchived } : null);
+      setDetailItem(prev => prev ? { ...prev, isArchived, pinnedAt: undefined } : null);
     }
     showToast(isArchived ? 'Item archived' : 'Item restored', 'info');
   };
@@ -584,7 +604,7 @@ export function StashApp() {
         {/* Top Header */}
         <Header
           onOpenSettings={() => setIsSettingsOpen(true)}
-          onOpenAdd={() => setIsAddOpen(true)}
+          onOpenAdd={() => { void openAdd('link'); }}
           isSelectionMode={isSelectionMode}
           onToggleSelectionMode={() => {
             setIsSelectionMode(!isSelectionMode);
@@ -610,7 +630,7 @@ export function StashApp() {
             </div>
             <div className="capture-row">
               <div className="capture-label"><Link2 size={18} /><span>Something worth keeping?</span></div>
-              <QuickSaveBar onSaveUrl={handleQuickSave} isLoading={isLoadingSave} />
+              <QuickSaveBar onSaveUrl={handleQuickSave} isLoading={isLoadingSave} onMapsUrl={url => { setAddInitialUrl(url); setAddInitialType('location'); setIsAddOpen(true); }} />
             </div>
             <div className="quick-create-grid" aria-label="Create a saved item">
               {([{ type: 'link', label: 'Save a link', icon: Link2 }, { type: 'note', label: 'Write a note', icon: FileText }, { type: 'checklist', label: 'Make a checklist', icon: ListChecks }, { type: 'location', label: 'Keep a place', icon: MapPin }, { type: 'file', label: 'Store a file', icon: Paperclip }] as const).map(({ type, label, icon: Icon }, index) => (
@@ -624,7 +644,7 @@ export function StashApp() {
             {/* Empty State if library has zero items */}
             {items.length === 0 ? (
               <EmptyState
-                onAddLink={() => setIsAddOpen(true)}
+                onAddLink={() => { void openAdd('link'); }}
                 onCreateCollection={() => {
                   setEditingCollection(null);
                   setIsCollectionModalOpen(true);
@@ -669,6 +689,7 @@ export function StashApp() {
                           onClick={(i) => setDetailItem(i)}
                           onCopy={handleCopy}
                           onToggleFavorite={handleToggleFavorite}
+                          onTogglePin={handleTogglePin}
                           onMove={(i) => {
                             setItemsToMove([i.id]);
                             setIsMoveModalOpen(true);
@@ -783,6 +804,7 @@ export function StashApp() {
                       onClick={(i) => setDetailItem(i)}
                       onCopy={handleCopy}
                       onToggleFavorite={handleToggleFavorite}
+                      onTogglePin={handleTogglePin}
                       onMove={(i) => {
                         setItemsToMove([i.id]);
                         setIsMoveModalOpen(true);
@@ -891,7 +913,7 @@ export function StashApp() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => setIsAddOpen(true)}
+                  onClick={() => { void openAdd('link'); }}
                   className="pill-btn pill-btn-black text-xs"
                 >
                   <Plus size={14} />
@@ -912,6 +934,7 @@ export function StashApp() {
                     onClick={(i) => setDetailItem(i)}
                     onCopy={handleCopy}
                     onToggleFavorite={handleToggleFavorite}
+                    onTogglePin={handleTogglePin}
                     onMove={(i) => {
                       setItemsToMove([i.id]);
                       setIsMoveModalOpen(true);
@@ -936,7 +959,7 @@ export function StashApp() {
           setSelectedCollectionId(null);
           setActiveTab(tab);
         }}
-        onOpenAdd={() => setIsAddOpen(true)}
+        onOpenAdd={() => { void openAdd('link'); }}
       />
 
       {/* Multi-Select Floating Action Toolbar */}
@@ -987,6 +1010,7 @@ export function StashApp() {
         onCopy={handleCopy}
         onShare={handleShare}
         onToggleFavorite={handleToggleFavorite}
+        onTogglePin={handleTogglePin}
         onToggleArchive={handleToggleArchive}
         onMove={(i) => {
           setItemsToMove([i.id]);

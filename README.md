@@ -44,3 +44,13 @@ The service worker precaches application assets, retains offline access, isolate
 ## Manual release review
 
 On the actual HTTPS installation and final native wrapper, check inbound shares from each source app, duplicate/multi-link handling, folder moves, collection message sharing, file download, backup/restore, offline launch, storage exhaustion and 404 behavior. Platform share-picker and wrapper integration require device validation before app-store release.
+
+## Compact cards, clipboard and pins
+
+Library cards show a compact title, collection/source label and thumbnail. Notes, checklists and full details stay in the detail panel. Tap the thumbnail to follow a saved link or location; tap the title to view/edit its saved details. Raw URLs and separate Open/View controls are omitted from detail previews; Copy link is available in the toolbar or card menu.
+
+Add/Plus reads the clipboard only in response to the click, and only fills a complete HTTP(S) web address, never ordinary text or a URL embedded in a message. It cannot determine clipboard age. Reading requires device/browser permission and support; a blank editor and manual paste remain available when access is denied. Maps links pasted into the home quick input or Add link field switch to the location editor. Readable map place names are derived from URL fields; opaque short links may need a name entered manually.
+
+Thumbnail support includes existing saved preview images, public YouTube video artwork and locally uploaded raster images. Other sites use a platform illustration when actual preview artwork is unavailable; authenticated social posts are not scraped. Public thumbnail requests go directly to the image host with no referrer. There is no generic third-party metadata proxy.
+
+Pin up to five active items per folder. Pinned items sort first in folder/search views and remain separate from favorites. Archiving clears the pin. Moving a pinned item to a folder whose five slots are occupied requires unpinning first. Deleting a collection and moving its items to Unsorted clears their folder-specific pins.

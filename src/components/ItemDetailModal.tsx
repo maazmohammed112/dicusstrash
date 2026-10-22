@@ -1,12 +1,13 @@
 import { useModalLifecycle } from '../hooks/useModalLifecycle';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SavedItem, Collection } from '../types/stash';
+import { ItemThumbnail } from './ItemThumbnail';
+import { PLATFORM_LABELS } from '../services/platformDetector';
 import { FileAttachment } from './FileAttachment';
 import { PlatformIcon } from './PlatformIcon';
 import { HighlightMarkerPin } from './HandDrawnAccent';
 import {
   X,
-  ExternalLink,
   Copy,
   Share2,
   Edit2,
@@ -16,8 +17,8 @@ import {
   Trash2,
   RefreshCw,
   Check,
-  MapPin,
-  Tag
+  Tag,
+  Pin
 } from 'lucide-react';
 
 interface ItemDetailModalProps {
@@ -28,6 +29,7 @@ interface ItemDetailModalProps {
   onCopy: (url: string) => void;
   onShare: (item: SavedItem) => void;
   onToggleFavorite: (id: string, e: React.MouseEvent) => void;
+  onTogglePin: (id: string) => void;
   onToggleArchive: (id: string) => void;
   onMove: (item: SavedItem) => void;
   onDelete: (item: SavedItem) => void;
@@ -43,12 +45,14 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   onCopy,
   onShare,
   onToggleFavorite,
+  onTogglePin,
   onToggleArchive,
   onMove,
   onDelete,
   onUpdate,
   onRefreshPreview
 }) => {
+  const [editError, setEditError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editNote, setEditNote] = useState('');
@@ -56,6 +60,8 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   const [editTags, setEditTags] = useState('');
   const [copied, setCopied] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => { setIsEditing(false); }, [item?.id, isOpen]);
 
   useModalLifecycle(isOpen && Boolean(item), onClose);
 
@@ -80,13 +86,15 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
       .map(t => t.trim().replace(/^#/, ''))
       .filter(Boolean);
 
-    await onUpdate(item.id, {
+    setEditError('');
+    try { await onUpdate(item.id, {
       title: editTitle.trim() || item.title,
       note: editNote.trim(),
       folderId: editFolderId,
       tags
     });
     setIsEditing(false);
+    } catch (error) { setEditError((error as Error).message || 'Changes could not be saved.'); }
   };
 
   const handleCopy = () => {
@@ -113,6 +121,9 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
     );
     await onUpdate(item.id, { checklist: updated });
   };
+
+  const destination = item.originalUrl || item.locationData?.mapsUrl;
+  const displayTitle = /^https?:\/\//i.test(item.title) ? PLATFORM_LABELS[item.platform] : item.title;
 
   const formattedDate = new Date(item.createdAt).toLocaleDateString(undefined, {
     weekday: 'short',
@@ -172,7 +183,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
 
           {/* Quick Toolbar */}
           <div className="flex items-center gap-1.5">
-            {item.originalUrl && (
+            {destination && (
               <button
                 type="button"
                 onClick={handleCopy}
@@ -230,34 +241,14 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
         {/* Scrollable Detail Body */}
         <div className="modal-scroll flex-1 overflow-y-auto pr-1 flex flex-col gap-5">
           {item.type === 'file' && <FileAttachment itemId={item.id} />}
-          {/* Thumbnail / Hero Image if available */}
-          {item.thumbnailUrl && item.type === 'link' && (
-            <div className="relative w-full max-h-72 rounded-3xl overflow-hidden bg-[#F6EDCF] border border-[rgba(21,21,21,0.06)] shadow-sm">
-              <img
-                src={item.thumbnailUrl}
-                alt={item.title}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
-            </div>
-          )}
-
           {/* EDIT MODE OR VIEW MODE */}
           {!isEditing ? (
             <>
-              {/* Title */}
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-[#151515] tracking-tight leading-tight">
-                  {item.title}
-                </h1>
-                {item.sourceHost && (
-                  <p className="mt-1 text-xs font-medium text-[#77736C]">
-                    Source: <span className="text-[#151515]">{item.sourceHost}</span>
-                  </p>
-                )}
+              <div className="detail-title-row">
+                <div><span className="detail-platform-label">{PLATFORM_LABELS[item.platform]}</span><h1>{displayTitle}</h1></div>
+                {destination ? <a className="detail-destination-tile" href={destination} target="_blank" rel="noopener noreferrer" aria-label={displayTitle}><ItemThumbnail item={item} /><span>{item.locationData?.placeName || displayTitle}</span></a> : <span className="detail-static-thumbnail"><ItemThumbnail item={item} /></span>}
               </div>
+              <button className="detail-pin-button" onClick={() => onTogglePin(item.id)} aria-pressed={Boolean(item.pinnedAt)}><Pin size={14} fill={item.pinnedAt ? 'currentColor' : 'none'} />{item.pinnedAt ? 'Pinned in this folder' : 'Pin in this folder'}</button>
 
               {/* Note / Highlight Area */}
               {item.note && (
@@ -305,29 +296,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                 </div>
               )}
 
-              {/* Location details */}
-              {item.type === 'location' && item.locationData && (
-                <div className="p-4 rounded-3xl bg-[#FFF9EA] border border-[#E7DEC7] flex flex-col gap-2">
-                  <div className="flex items-center gap-2 text-sm font-bold text-[#151515]">
-                    <MapPin size={16} className="text-[#F2755B]" />
-                    <span>{item.locationData.placeName}</span>
-                  </div>
-                  {item.locationData.address && (
-                    <p className="text-xs text-[#77736C]">{item.locationData.address}</p>
-                  )}
-                  {item.locationData.mapsUrl && (
-                    <a
-                      href={item.locationData.mapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-semibold text-[#151515] underline flex items-center gap-1 mt-1"
-                    >
-                      <ExternalLink size={12} />
-                      View on Google Maps
-                    </a>
-                  )}
-                </div>
-              )}
+              {item.type === 'location' && item.locationData?.address && <p className="share-caption">{item.locationData.address}</p>}
 
               {/* Tags */}
               {item.tags && item.tags.length > 0 && (
@@ -341,25 +310,6 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                       #{tag}
                     </span>
                   ))}
-                </div>
-              )}
-
-              {/* Original URL action link */}
-              {item.originalUrl && (
-                <div className="p-4 rounded-2xl bg-[#FFFDF6] border border-[rgba(21,21,21,0.06)] flex items-center justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[11px] font-semibold text-[#77736C] block">Original Link</span>
-                    <p className="text-xs text-[#151515] truncate font-mono mt-0.5">{item.originalUrl}</p>
-                  </div>
-                  <a
-                    href={item.originalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3.5 py-2 rounded-full bg-[#151515] text-[#FFFEF7] text-xs font-semibold flex items-center gap-1.5 flex-shrink-0 hover:bg-[#252525]"
-                  >
-                    <ExternalLink size={13} />
-                    <span>Open</span>
-                  </a>
                 </div>
               )}
 
@@ -382,6 +332,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           ) : (
             /* EDIT FORM */
             <div className="flex flex-col gap-4">
+              {editError && <p className="file-error" role="alert">{editError}</p>}
               <div>
                 <label className="text-xs font-semibold text-[#77736C] block mb-1">Title</label>
                 <input

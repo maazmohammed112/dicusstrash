@@ -118,17 +118,32 @@ export async function addItem(itemData: Omit<SavedItem, 'id' | 'createdAt' | 'up
 }
 
 export async function updateItem(id: string, updates: Partial<SavedItem>): Promise<SavedItem | undefined> {
-  const existing = await db.items.get(id);
-  if (!existing) return undefined;
+  return db.transaction('rw', db.items, async () => {
+    const existing = await db.items.get(id);
+    if (!existing) return undefined;
+    const updated = { ...existing, ...updates, updatedAt: Date.now() };
+    if (updated.pinnedAt && !updated.isArchived && (updated.folderId !== existing.folderId || !existing.pinnedAt)) {
+      const count = await db.items.where('folderId').equals(updated.folderId).and(row => row.id !== id && Boolean(row.pinnedAt) && !row.isArchived).count();
+      if (count >= 5) throw new Error('This folder already has five pinned items. Unpin one first.');
+    }
+    await db.items.put(updated);
+    return updated;
+  });
+}
 
-  const updated: SavedItem = {
-    ...existing,
-    ...updates,
-    updatedAt: Date.now()
-  };
-
-  await db.items.put(updated);
-  return updated;
+export async function togglePin(id: string): Promise<SavedItem | undefined> {
+  return db.transaction('rw', db.items, async () => {
+    const item = await db.items.get(id);
+    if (!item) return undefined;
+    if (item.isArchived) throw new Error('Restore this item before pinning it.');
+    if (!item.pinnedAt) {
+      const count = await db.items.where('folderId').equals(item.folderId).and(row => Boolean(row.pinnedAt) && !row.isArchived).count();
+      if (count >= 5) throw new Error('You can pin up to five items in this folder. Unpin one first.');
+    }
+    const updated = { ...item, pinnedAt: item.pinnedAt ? undefined : Date.now(), updatedAt: Date.now() };
+    await db.items.put(updated);
+    return updated;
+  });
 }
 
 export async function toggleFavorite(id: string): Promise<boolean> {
@@ -145,6 +160,7 @@ export async function toggleArchive(id: string): Promise<boolean> {
   const newArchive = !item.isArchived;
   await updateItem(id, {
     isArchived: newArchive,
+    pinnedAt: undefined,
     archivedAt: newArchive ? Date.now() : undefined
   });
   return newArchive;
@@ -170,6 +186,10 @@ export async function moveItemsToFolder(itemIds: string[], targetFolderId: strin
     for (const id of itemIds) {
       const item = await db.items.get(id);
       if (item) {
+        if (item.pinnedAt && item.folderId !== targetFolderId) {
+          const count = await db.items.where('folderId').equals(targetFolderId).and(row => Boolean(row.pinnedAt) && !row.isArchived).count();
+          if (count >= 5) throw new Error('The destination already has five pinned items. Unpin this item before moving it.');
+        }
         await db.items.put({
           ...item,
           folderId: targetFolderId,
@@ -235,6 +255,7 @@ export async function deleteCollection(
       await db.items.put({
         ...item,
         folderId: 'unsorted',
+        pinnedAt: undefined,
         updatedAt: now
       });
     }

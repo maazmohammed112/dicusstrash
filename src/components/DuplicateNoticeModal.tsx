@@ -77,7 +77,7 @@ export const DuplicateNoticeModal: React.FC<DuplicateNoticeModalProps> = ({
         <div className="p-3.5 mb-5 rounded-2xl bg-[#FFF9EA] border border-[#E7DEC7] flex items-center gap-3">
           <div className="flex-1 min-w-0">
             <h4 className="text-sm font-semibold text-[#151515] truncate">{existingItem.title}</h4>
-            <p className="text-xs text-[#77736C] truncate mt-0.5">{existingItem.originalUrl}</p>
+            <p className="text-xs text-[#77736C] truncate mt-0.5">Already saved in your library</p>
           </div>
         </div>
 

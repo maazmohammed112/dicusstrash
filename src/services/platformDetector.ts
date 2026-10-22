@@ -142,9 +142,10 @@ export function deriveTitleFromUrl(urlString: string, platform: PlatformType): s
     if (platform === 'maps') {
       const q = parsed.searchParams.get('q') || parsed.searchParams.get('query');
       if (q) return decodeURIComponent(q);
-      if (pathParts.length > 1 && pathParts[0] === 'place') {
-        return decodeURIComponent(pathParts[1].replace(/\+/g, ' '));
-      }
+      const placeIndex = pathParts.indexOf('place');
+      if (placeIndex >= 0 && pathParts[placeIndex + 1]) return decodeURIComponent(pathParts[placeIndex + 1].replace(/\+/g, ' '));
+      const appleName = parsed.searchParams.get('name');
+      if (appleName) return appleName;
       return 'Google Maps Location';
     }
 
@@ -197,5 +198,18 @@ export async function inspectUrl(input: string): Promise<ExtractedUrlInfo> {
     faviconUrl
   };
 
+  result.thumbnailUrl = getPublicThumbnail(normalized);
   return result;
+}
+
+// Public video artwork is available without sending links to a metadata proxy.
+export function getPublicThumbnail(url: string): string | undefined {
+  try {
+    if (detectPlatform(url) !== 'youtube') return undefined;
+    const parsed = new URL(normalizeUrl(url));
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    const id = parsed.hostname === 'youtu.be' ? parts[0] : parsed.searchParams.get('v') || (['shorts','embed','live'].includes(parts[0]) ? parts[1] : '');
+    if (id && /^[a-zA-Z0-9_-]{11}$/.test(id)) return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+  } catch { /* Use the platform artwork when a preview is unavailable. */ }
+  return undefined;
 }

@@ -54,6 +54,7 @@ export interface SavedItem {
   folderId: string; // 'unsorted' or collection id
   tags: string[];
   isFavorite: boolean;
+  pinnedAt?: number;
   isArchived: boolean;
   checklist?: ChecklistItem[];
   locationData?: LocationData;

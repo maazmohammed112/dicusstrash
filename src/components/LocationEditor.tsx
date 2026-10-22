@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { inspectUrl, extractUrlFromText, normalizeUrl } from '../services/platformDetector';
+import React, { useState, useEffect } from 'react';
 import type { Collection, LocationData } from '../types/stash';
 import { MapPin, Link2, Folder, FileText } from 'lucide-react';
 
@@ -33,21 +34,31 @@ export const LocationEditor: React.FC<LocationEditorProps> = ({
     collections.some(c => c.id === initialFolderId) ? initialFolderId : 'unsorted'
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (initialData) {
+      setPlaceName(initialData.placeName || ''); setMapsUrl(initialData.mapsUrl || ''); setAddress(initialData.address || '');
+    }
+  }, [initialData?.placeName, initialData?.mapsUrl, initialData?.address]);
+  const [error, setError] = useState('');
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!placeName.trim() && !mapsUrl.trim()) return;
 
-    onSave({
+    let normalizedMapsUrl: string | undefined;
+    try { normalizedMapsUrl = mapsUrl.trim() ? normalizeUrl(mapsUrl.trim()) : undefined; }
+    catch { setError('Please paste a valid map URL.'); return; }
+    try { await onSave({
       placeName: placeName.trim() || 'Saved Location',
-      mapsUrl: mapsUrl.trim() || undefined,
+      mapsUrl: normalizedMapsUrl,
       address: address.trim() || undefined,
       note: note.trim() || undefined,
       folderId
-    });
+    }); } catch { setError('The location could not be saved. Please try again.'); }
   };
 
   return (
     <form onSubmit={handleSubmit} className="location-editor flex flex-col gap-4">
+      {error && <p role="alert" className="file-error">{error}</p>}
       <div>
         <label className="text-xs font-semibold text-[#77736C] flex items-center gap-1.5 mb-1.5">
           <MapPin size={13} />
@@ -71,7 +82,13 @@ export const LocationEditor: React.FC<LocationEditorProps> = ({
         <input
           type="text"
           value={mapsUrl}
-          onChange={e => setMapsUrl(e.target.value)}
+          onChange={async e => {
+            const value = e.target.value; setMapsUrl(value); setError('');
+            const extracted = extractUrlFromText(value);
+            if (extracted) {
+              try { const info = await inspectUrl(extracted); if (info.platform === 'maps') setPlaceName(info.derivedTitle); } catch { /* Keep manual entry. */ }
+            }
+          }}
           placeholder="https://maps.app.goo.gl/..."
           className="w-full px-4 py-2.5 rounded-xl border border-[rgba(21,21,21,0.12)] bg-white text-sm text-[#151515] focus:outline-none focus:ring-2 focus:ring-[#151515]"
         />

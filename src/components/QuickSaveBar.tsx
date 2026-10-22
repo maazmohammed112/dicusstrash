@@ -1,31 +1,27 @@
 import React, { useState } from 'react';
 import { Clipboard, X, Loader2, ArrowRight } from 'lucide-react';
-import { extractUrlFromText } from '../services/platformDetector';
+import { readClipboardUrl } from '../services/clipboardService';
+import { detectPlatform, extractUrlFromText } from '../services/platformDetector';
 
 interface QuickSaveBarProps {
   onSaveUrl: (url: string) => Promise<void>;
   isLoading?: boolean;
+  onMapsUrl?: (url: string) => void;
 }
 
 export const QuickSaveBar: React.FC<QuickSaveBarProps> = ({
   onSaveUrl,
-  isLoading = false
+  isLoading = false,
+  onMapsUrl
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   const handlePaste = async () => {
-    try {
-      if (navigator.clipboard && navigator.clipboard.readText) {
-        const text = await navigator.clipboard.readText();
-        if (text) {
-          setInputValue(text.trim());
-          setErrorMessage('');
-        }
-      }
-    } catch {
-      // Manual pasting supported via native input
-    }
+    const url = await readClipboardUrl();
+    if (!url) return;
+    setInputValue(url); setErrorMessage('');
+    if (detectPlatform(url) === 'maps') onMapsUrl?.(url);
   };
 
   const handleClear = () => {
@@ -64,6 +60,8 @@ export const QuickSaveBar: React.FC<QuickSaveBarProps> = ({
           value={inputValue}
           onChange={(e) => {
             setInputValue(e.target.value);
+            const url = extractUrlFromText(e.target.value);
+            if (url && detectPlatform(url) === 'maps') onMapsUrl?.(url);
             if (errorMessage) setErrorMessage('');
           }}
           placeholder="Paste something worth keeping..."

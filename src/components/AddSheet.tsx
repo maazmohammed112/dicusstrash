@@ -4,6 +4,7 @@ import type { Collection, ItemType } from '../types/stash';
 import { NotesEditor } from './NotesEditor';
 import { ChecklistEditor } from './ChecklistEditor';
 import { LocationEditor } from './LocationEditor';
+import { readClipboardUrl } from '../services/clipboardService';
 import { inspectUrl, extractUrlFromText } from '../services/platformDetector';
 import { PlatformIcon } from './PlatformIcon';
 import { X, Link2, FileText, CheckSquare, MapPin, Paperclip, Loader2 } from 'lucide-react';
@@ -77,39 +78,39 @@ export const AddSheet: React.FC<AddSheetProps> = ({
   // Inline folder creation
   const [isInlineCreatingFolder, setIsInlineCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [mapsSeed, setMapsSeed] = useState<{ placeName: string; mapsUrl: string } | undefined>();
+  const [clipboardNotice, setClipboardNotice] = useState('');
 
   useEffect(() => {
-    if (initialType) setActiveTab(initialType);
-    if (initialUrl) {
-      setUrlInput(initialUrl);
-      handleInspect(initialUrl);
-    }
+    if (!isOpen) return;
+    setActiveTab(initialType);
+    setUrlInput(initialUrl);
+    setLinkTitle(''); setLinkNote(''); setLinkThumbnail(undefined);
+    setLinkFolderId('unsorted'); setFileFolderId('unsorted');
+    setMapsSeed(undefined); setClipboardNotice('');
+    if (initialUrl) void handleInspect(initialUrl);
   }, [initialType, initialUrl, isOpen]);
 
   useModalLifecycle(isOpen, onClose);
 
-  if (!isOpen) return null;
-
-  const handleInspect = async (rawInput: string) => {
-    const extracted = extractUrlFromText(rawInput) || rawInput.trim();
-    if (!extracted || !extracted.includes('.')) return;
-
+  async function handleInspect(rawInput: string) {
+    const extracted = extractUrlFromText(rawInput);
+    if (!extracted) return;
     setIsInspecting(true);
     try {
       const info = await inspectUrl(extracted);
       setDetectedPlatform(info.platform);
-      if (info.derivedTitle && !linkTitle) {
-        setLinkTitle(info.derivedTitle);
+      setLinkTitle(info.derivedTitle);
+      setLinkThumbnail(info.thumbnailUrl);
+      if (info.platform === 'maps') {
+        setMapsSeed({ placeName: info.derivedTitle, mapsUrl: info.normalizedUrl });
+        setActiveTab('location');
       }
-      if (info.thumbnailUrl) {
-        setLinkThumbnail(info.thumbnailUrl);
-      }
-    } catch {
-      // Fallback gracefully
-    } finally {
-      setIsInspecting(false);
-    }
-  };
+    } catch { /* Incomplete addresses remain editable. */ }
+    finally { setIsInspecting(false); }
+  }
+
+  if (!isOpen) return null;
 
   const handleLinkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,7 +229,13 @@ export const AddSheet: React.FC<AddSheetProps> = ({
                 <label className="text-xs font-semibold text-[#77736C] flex items-center gap-1.5 mb-1.5">
                   <Link2 size={13} />
                   <span>URL / Web Address</span>
+                  <button type="button" className="paste-url-button" onClick={async () => {
+                    const url = await readClipboardUrl();
+                    if (url) { setUrlInput(url); setClipboardNotice(''); await handleInspect(url); }
+                    else setClipboardNotice('No web link available. You can paste a URL into the field.');
+                  }}>Paste URL</button>
                 </label>
+                {clipboardNotice && <p className="share-caption" role="status">{clipboardNotice}</p>}
                 <div className="url-input-wrap relative flex items-center">
                   <input
                     type="text"
@@ -365,6 +372,7 @@ export const AddSheet: React.FC<AddSheetProps> = ({
           {/* TAB 4: LOCATION */}
           {activeTab === 'location' && (
             <LocationEditor
+              initialData={mapsSeed}
               collections={collections}
               onSave={async (data) => {
                 await onSaveLocation(data);
