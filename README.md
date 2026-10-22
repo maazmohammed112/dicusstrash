@@ -54,3 +54,15 @@ Add/Plus reads the clipboard only in response to the click, and only fills a com
 Thumbnail support includes existing saved preview images, public YouTube video artwork and locally uploaded raster images. Other sites use a platform illustration when actual preview artwork is unavailable; authenticated social posts are not scraped. Public thumbnail requests go directly to the image host with no referrer. There is no generic third-party metadata proxy.
 
 Pin up to five active items per folder. Pinned items sort first in folder/search views and remain separate from favorites. Archiving clears the pin. Moving a pinned item to a folder whose five slots are occupied requires unpinning first. Deleting a collection and moving its items to Unsorted clears their folder-specific pins.
+
+## Importing between devices without duplicates
+
+Use Settings → Download JSON Backup on one device, transfer the downloaded file, then Settings → Import JSON Backup → Import missing only on the other device.
+
+- Incoming URLs are compared against the entire local vault, including archived items and other folders. Matching uses validated HTTP(S) URLs, strips known tracking fields and ignores query-parameter order; different short links cannot be proven to have the same destination without following redirects.
+- A duplicate URL is skipped even if its imported ID or folder differs. The current device keeps its existing folder, notes, favorites, pins and archive state. Duplicates repeated inside the same JSON are also skipped. Existing local duplicates are not deleted or moved by import.
+- Folder IDs are reused first. Otherwise names are matched after Unicode normalization, trimming, repeated-space normalization and case folding. A matching folder's metadata is not overwritten. Only missing folders are created; missing/unknown destinations fall back to Unsorted.
+- New items retain their imported folder through that mapping. If a new URL collides with an unrelated local item ID, the new item receives a fresh ID rather than replacing local data.
+- Notes and file items without URLs are matched by stable item ID. New file originals are imported with their item IDs remapped as needed; existing originals are never replaced. A matching file item that is missing its original can recover that missing attachment. Identical independently created files with different IDs are not content-hashed.
+- Merge preserves this device's preferences. It applies all writes in one transaction and rolls back if an attachment is malformed or storage is exhausted.
+- The summary reports added items/folders/files, skipped items/URLs and reused folders. Up to 20 folder-conflict examples show which current folder was kept.

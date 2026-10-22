@@ -1,7 +1,7 @@
 import { useModalLifecycle } from '../hooks/useModalLifecycle';
 import React, { useState, useEffect } from 'react';
-import type { AppSettings, StorageStats, Collection } from '../types/stash';
-import { exportDataToJson, validateBackupFile, executeRestore } from '../services/backupService';
+import type { ExportDataPackage, AppSettings, StorageStats, Collection } from '../types/stash';
+import { exportDataToJson, validateBackupFile, executeRestore, type RestoreResult } from '../services/backupService';
 import { computeStorageStats, requestPersistentStorage } from '../db/database';
 import { ConfirmationModal } from './ConfirmationModal';
 import { medianBridge } from '../services/medianBridge';
@@ -36,7 +36,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isPersisted, setIsPersisted] = useState(false);
   const [showEraseConfirm, setShowEraseConfirm] = useState(false);
   const [importNotice, setImportNotice] = useState<string>('');
-  const [pendingRestoreData, setPendingRestoreData] = useState<any>(null);
+  const [pendingRestoreData, setPendingRestoreData] = useState<ExportDataPackage | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [importReport, setImportReport] = useState<RestoreResult | null>(null);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
 
   useEffect(() => {
@@ -60,12 +63,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   if (!isOpen) return null;
 
   const handleExport = async () => {
-    await exportDataToJson();
+    if (isExporting) return;
+    setIsExporting(true);
+    try { await exportDataToJson(); setImportNotice('JSON backup downloaded, including saved files.'); }
+    catch { setImportNotice('Could not create the backup. Please try again.'); }
+    finally { setIsExporting(false); }
   };
 
   const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
+    if (isImporting) return;
     const file = e.target.files[0];
+    e.target.value = '';
+    setImportNotice(''); setImportReport(null);
     const validation = await validateBackupFile(file);
 
     if (!validation.isValid) {
@@ -73,19 +83,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       return;
     }
 
-    setPendingRestoreData(validation.packageData);
+    setPendingRestoreData(validation.packageData || null);
     setShowRestoreModal(true);
     e.target.value = '';
   };
 
-  const confirmRestore = async (mode: 'merge' | 'replace') => {
-    if (!pendingRestoreData) return;
-    const res = await executeRestore(pendingRestoreData, mode);
-    setShowRestoreModal(false);
-    setPendingRestoreData(null);
-    setImportNotice(`Restored ${res.restoredItems} items & ${res.restoredCollections} collections!`);
-    await onRefreshData();
-    await loadStats();
+  const confirmRestore = async () => {
+    if (!pendingRestoreData || isImporting) return;
+    setIsImporting(true);
+    try {
+      const res = await executeRestore(pendingRestoreData, 'merge');
+      setImportReport(res);
+      setShowRestoreModal(false); setPendingRestoreData(null);
+      setImportNotice(`Added ${res.restoredItems} items, ${res.restoredCollections} folders and ${res.restoredAttachments} files. Skipped ${res.skippedItems} existing items (${res.skippedUrls} duplicate URLs). Kept ${res.keptInCurrentFolder} links in their current folders. Reused ${res.reusedCollections} existing folders.`);
+      await Promise.allSettled([onRefreshData(), loadStats()]);
+    } catch {
+      setShowRestoreModal(false);
+      setImportNotice('Import could not finish. Your existing vault is unchanged. Check available device storage and try again.');
+    } finally { setIsImporting(false); }
   };
 
   const handleRequestPersist = async () => {
@@ -236,22 +251,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             )}
 
+            <p className="share-caption">Import adds missing items only. Existing links keep their folders, notes and pins. Folders with the same name are reused.</p>
+            {importReport && importReport.folderConflicts.length > 0 && <details className="import-conflicts"><summary>Links kept in their existing folders{importReport.keptInCurrentFolder > 20 ? ' (first 20)' : ''}</summary><ul>{importReport.folderConflicts.map((conflict, index) => <li key={index}><strong>{conflict.title}</strong><span>Kept in {conflict.currentFolder}; incoming folder was {conflict.incomingFolder}.</span></li>)}</ul></details>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={handleExport}
+                disabled={isExporting || isImporting}
                 className="p-3.5 rounded-2xl bg-white border border-[rgba(21,21,21,0.08)] hover:bg-[#F6EDCF] flex items-center justify-center gap-2 text-xs font-bold text-[#151515] transition-colors cursor-pointer"
               >
                 <Download size={15} />
-                <span>Export Backup (JSON)</span>
+                <span>{isExporting ? 'Preparing download…' : 'Download JSON Backup'}</span>
               </button>
 
               <label className="p-3.5 rounded-2xl bg-white border border-[rgba(21,21,21,0.08)] hover:bg-[#F6EDCF] flex items-center justify-center gap-2 text-xs font-bold text-[#151515] transition-colors cursor-pointer text-center">
                 <Upload size={15} />
-                <span>Restore Backup (JSON)</span>
+                <span>Import JSON Backup</span>
                 <input
                   type="file"
-                  accept=".json"
+                  accept=".json,application/json"
+                  disabled={isImporting}
                   onChange={handleFileImport}
                   className="hidden"
                 />
@@ -317,18 +336,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         onCancel={() => setShowEraseConfirm(false)}
       />
 
-      {/* Restore merge vs replace modal */}
+      {/* Non-destructive import: existing device data always wins. */}
       {showRestoreModal && pendingRestoreData && (
         <ConfirmationModal
           isOpen={showRestoreModal}
-          title="Restore Backup"
-          description={`Found ${pendingRestoreData.items?.length || 0} items and ${pendingRestoreData.collections?.length || 0} collections in backup. Would you like to merge with current items or replace completely?`}
-          type="warning"
-          isFolderDelete={true}
-          confirmText="Replace All Data"
-          alternativeText="Merge with Existing Data"
-          onConfirmAlternative={() => confirmRestore('merge')}
-          onConfirm={() => confirmRestore('replace')}
+          title="Import missing items"
+          description={`Found ${pendingRestoreData.items.length} items and ${pendingRestoreData.collections.length} folders. Add only missing URLs and items, reuse matching folders, and keep this device’s existing links in their current folders. Your existing items and preferences will stay unchanged.`}
+          type="info"
+          isBusy={isImporting}
+          confirmText={isImporting ? 'Importing…' : 'Import missing only'}
+          onConfirm={confirmRestore}
           onCancel={() => {
             setShowRestoreModal(false);
             setPendingRestoreData(null);

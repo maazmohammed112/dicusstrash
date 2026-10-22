@@ -4,6 +4,7 @@ import { AlertTriangle, Trash2, FolderSync } from 'lucide-react';
 
 export interface ConfirmationModalProps {
   isOpen: boolean;
+  isBusy?: boolean;
   title: string;
   description: string;
   type?: 'danger' | 'warning' | 'info';
@@ -19,6 +20,7 @@ export interface ConfirmationModalProps {
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isOpen,
+  isBusy = false,
   title,
   description,
   type = 'danger',
@@ -33,7 +35,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 }) => {
   const [typedInput, setTypedInput] = useState('');
 
-  useModalLifecycle(isOpen, onCancel);
+  useModalLifecycle(isOpen, () => { if (!isBusy) onCancel(); });
 
   if (!isOpen) return null;
 
@@ -51,11 +53,11 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         WebkitBackdropFilter: 'blur(8px)'
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel();
+        if (e.target === e.currentTarget && !isBusy) onCancel();
       }}
     >
       <div
-        role="dialog" aria-modal="true" aria-label="Confirm action" tabIndex={-1}
+        role="dialog" aria-modal="true" aria-busy={isBusy} aria-label="Confirm action" tabIndex={-1}
         className="modal-panel confirmationmodal animate-scale relative w-full max-w-md p-6 sm:p-7 rounded-3xl"
         style={{
           backgroundColor: '#FFFEF7',
@@ -108,6 +110,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             <button
               type="button"
               onClick={onConfirmAlternative}
+              disabled={isBusy}
               className="w-full py-3 px-4 rounded-full font-semibold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
               style={{
                 backgroundColor: '#151515',
@@ -121,7 +124,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
           <button
             type="button"
-            disabled={isConfirmDisabled}
+            disabled={isConfirmDisabled || isBusy}
             onClick={onConfirm}
             className="w-full py-3 px-4 rounded-full font-semibold text-sm transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
@@ -136,6 +139,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           <button
             type="button"
             onClick={onCancel}
+            disabled={isBusy}
             aria-label="Close dialog"
             className="w-full py-2.5 px-4 rounded-full font-medium text-sm text-[#77736C] hover:text-[#151515] transition-all cursor-pointer"
           >
